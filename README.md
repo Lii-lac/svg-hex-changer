@@ -19,4 +19,4 @@ where the former changes any instance of the first hex color it reads to toColor
 
 ## Soon-to-come
 This supposed to be a very simple personal project while I learn how to make my github face publicly. That said, right now I still plan to implement:
-- Mass-altering of images by passing a directory as the first arg `imageName`, and applying `toColor` to each of those images.
+- Batch-altering of images by passing a directory as the first arg `imageName`, and applying `toColor` to each of those images.
