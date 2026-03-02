@@ -6,16 +6,12 @@ Compile with your favorite compiler and then get to hex changing!
 
 Right now, the program only supports changing one file at a time, in the form:
 ```bash
-./svg-hex-color-changer.out <imageName> <toColor>
+./svg-hex-color-changer.out imageName.svg [fromColor] toColor
 ```
-or
-```bash
-./svg-hex-color-changer.out <imageName> <fromColor> <toColor>
-```
-where the former changes any instance of the first hex color it reads to toColor, and the latter changes any instance of fromColor to toColor.
-- `imageName` must be the name of the image, in the form `imageName.svg` (include the `.svg`).
-- `toColor` must be a hex color, in the form `FFFFFF` (no `#`).
-- `fromColor` must be a hex color, in the form `FFFFFF` (no `#`).
+If fromColor is not specified, it will default to the first hex color it finds in the svg.
+- `imageName` must be the name of the image in the form `imageName.svg` (include the `.svg`).
+- `toColor` must be a hex color in the form `FFFFFF` (no `#`).
+- `fromColor` is optional, and must be a hex color in the form `FFFFFF` (no `#`).
 
 ## Soon-to-come
 This supposed to be a very simple personal project while I learn how to make my github face publicly. That said, right now I still plan to implement:
