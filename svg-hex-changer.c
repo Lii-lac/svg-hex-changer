@@ -112,10 +112,9 @@ int process_svg_file(int argCount, char* argValues[], char* inFileName, int curr
     //iterate!
     swap_hexes(buff, fileSize, fromColor, toColor);
 
-
     //make a string holding the output file name
     char* outFileName = (char*)malloc(strlen(inFileName)+strlen(argValues[argCount-1])+1+4+1); // sizeof("inFile-tocolor.svg\0")
-    //if we have a file extention, set the last '.' to a null string terminator.
+    //if we have a file extension, set the last '.' to a null string terminator.
     if (curr != -1){
         inFileName[curr] = '\0';
     }
@@ -124,7 +123,6 @@ int process_svg_file(int argCount, char* argValues[], char* inFileName, int curr
     strcat(outFileName, "-");
     strcat(outFileName, toColor);
     strcat(outFileName, ".svg");
-    
     
     FILE* outFile = fopen(outFileName, "w");
     if (outFile == NULL) {
@@ -220,6 +218,10 @@ int main(int argc, char* argv[]){
 
     }
     else { //single file case
+        if (strcmp(inFileName+curr, ".svg") != 0){
+            printf("**ERROR: expected file extension to be \".svg\", but got \"%s\"\n", inFileName+curr);
+            return -1;
+        }
         return process_svg_file(argc, argv, inFileName, curr);
     }
 
