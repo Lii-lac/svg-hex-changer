@@ -19,12 +19,60 @@
 
 /**
   * @brief
-  * Helper function that actually writes each individual newly-altered image file (.svg)
+  * Helper function that iterates through the buffer, replacing fromColor to toColor.
+  * If no fromColor exists, it was initialized as "GGGGGG" and will be replaced by
+  * the first instance of a hex code in the .svg
+  *
+  * @param buff pointer to character array (string) holding the contents of the .svg
+  * @param fileSize integer holding the size of the svg, so we know how long to iterate
+  * @param fromColor pointer to a character array (string) holding the color to change from
+  * @param toColor pointer to a character array (string) holding the color to change to
+  *
+  * @return nothing.
+  */
+void swap_hexes(char* buff, int fileSize, char* fromColor, const char* toColor){
+    
+    //current color while iterating:
+    char selectedColor[7];
+    selectedColor[6] = '\0';
+
+    //iteration:
+    for (size_t i = 0; i < fileSize; i++){
+        if (buff[i] == '#'){ //find where a hex is possibly mentioned
+            
+            //check if we have enough space for a hex here
+            if (i+6>fileSize){
+                break;
+            }
+            
+            for (size_t j = 0; j < 6; j++){
+                if (isxdigit(buff[i+1+j]) == 0){ //check if the next 6 chars are valid hex values
+                    break; //break if not
+                }
+                if (fromColor[5] == 'G'){ //puts the first hex we save into fromColor, overwriting the last G when a valid hex is read.
+                    fromColor[j] = buff[i+1+j];
+                }
+                selectedColor[j] = buff[i+1+j]; //save the hex we just read to selectedColor too, every time
+            }
+            for (size_t j=0; j < 5; j++){
+                if (strcmp(selectedColor, fromColor) == 0){ //if the current hex we're reading is also the fromColor we need to change,
+                    buff[i+1+j] = toColor[j];               //replace the hexes
+                }
+            }
+        }   
+    }
+}
+
+/**
+  * @brief
+  * Helper function that writes each individual newly-altered image file (.svg)
   *
   * @param argCount integer count of arguments passed via terminal
   * @param argValues array of strings (character arrays) of each argument passed via terminal
   * @param inFileName pointer to a string of the file name in the form `fileName.svg` 
   * @param curr index of last `.` in inFileName
+  *
+  * @return 0 on success, -1 if not.
   */
 int process_svg_file(int argCount, char* argValues[], char* inFileName, int curr){
 
@@ -46,141 +94,54 @@ int process_svg_file(int argCount, char* argValues[], char* inFileName, int curr
 
     fread(buff, 1, (size_t)fileSize, inFile); //read entire file into buffer
     buff[fileSize] = '\0';
-
     //By this line, buff is the svg as a string in full
-    //printf("%s", buff);
 
-    if (argCount == 3){ //no given hex, we need to get the first on our own
 
-        char toColor[7];
-        strncpy(toColor, argValues[2], 6);
-        toColor[6] = '\0';
+    //initialize hex color variables -----
+    //color to change to:
+    char toColor[7];
+    strncpy(toColor, argValues[argCount-1], 6);
+    toColor[6] = '\0';
 
-        char fromColor[7] = "GGGGGG\0"; //initialize to all Gs because it's an impossible hex
-
-        char selectedColor[7];
-        selectedColor[6] = '\0';
-        
-        for (size_t i = 0; i < fileSize; i++){
-            if (buff[i] == '#'){ //find where a hex is possibly mentioned
-
-                //check if we have enough space for a hex here
-                if (i+6>fileSize){
-                    break;
-                }
-
-                
-                for (size_t j = 0; j < 6; j++){
-                    if (isxdigit(buff[i+1+j]) == 0){ //check if the next 6 chars are valid hex values
-                        break; //break if not
-                    }
-                    if (fromColor[5] == 'G'){ //puts the first hex we save into fromColor, overwriting the last G when a valid hex is read.
-                        fromColor[j] = buff[i+1+j];
-                    }
-                    selectedColor[j] = buff[i+1+j]; //save the hex we just read to selectedColor too, every time
-                }
-                for (size_t j=0; j < 5; j++){
-                    if (strcmp(selectedColor, fromColor) == 0){ //if the current hex we're reading is also the fromColor we need to change,
-                        buff[i+1+j] = toColor[j];               //replace the hexes
-                    }
-                }
-            }   
-        }
-        
-        //if we have a file extention, set the last '.' to a null string terminator.
-        if (curr != -1){
-            inFileName[curr] = '\0';
-        }
-
-        char* outFileName = (char*)malloc(strlen(inFileName)+strlen(argValues[2])+1+4+1); // sizeof("inFile-tocolor.svg\0")
-        //repeatedly append pieces of string into final output name
-        strcpy(outFileName, inFileName);
-        strcat(outFileName, "-");
-        strcat(outFileName, toColor);
-        strcat(outFileName, ".svg");
-        
-        fclose(inFile);
-        
-
-        FILE* outFile = fopen(outFileName, "w");
-        if (outFile == NULL) {
-            printf("**ERROR: unable to open input file.\n");
-            return -1;
-        }
-
-        
-        long writeSize = fwrite(buff, sizeof(char), fileSize, outFile);
-        if (writeSize != fileSize){
-            printf("**ERROR WRITING TO FILE: expected to write %ld bytes, but only wrote %ld\n", fileSize, writeSize);
-            return -1;
-        }
-        fclose(outFile);
-        free(outFileName);
-    }
-
-    if (argCount == 4){ // passed two hexes:
-        char toColor[7];
-        strncpy(toColor, argValues[3], 6);
-        toColor[6] = '\0';
-
-        char fromColor[7];
+    //color to change from:
+    char fromColor[7] = "GGGGGG\0";
+    if (argCount == 4){
         strncpy(fromColor, argValues[2], 6);
-        fromColor[6] = '\0';
-
-        char selectedColor[7];
-        selectedColor[6] = '\0';
-        
-        for (size_t i = 0; i < fileSize; i++){
-            if (buff[i] == '#'){
-                //check if we have enough space for a hex here
-                if (i+6>fileSize){
-                    break;
-                }
-                //check if the next 6 chars are hex values
-                for (size_t j = 0; j < 6; j++){
-                    if (isxdigit(buff[i+1+j]) == 0){
-                        break; //break if not a hex value
-                    }
-                    selectedColor[j] = buff[i+1+j];
-                }
-                for (size_t j=0; j < 5; j++){
-                    if (strcmp(selectedColor, fromColor) == 0){
-                        buff[i+1+j] = toColor[j];
-                    }
-                }
-            }   
-        }       
-
-        //if we have a file extention, set the last '.' to a null string terminator.
-        if (curr != -1){
-            inFileName[curr] = '\0';
-        }
-
-        char* outFileName = (char*)malloc(strlen(inFileName)+strlen(argValues[3])+1+4+1); // sizeof("inFile-tocolor.svg\0")
-        //repeatedly append pieces of string into final output name
-        strcpy(outFileName, inFileName);
-        strcat(outFileName, "-");
-        strcat(outFileName, toColor);
-        strcat(outFileName, ".svg");
-        
-        fclose(inFile);
-
-        FILE* outFile = fopen(outFileName, "w");
-        if (outFile == NULL) {
-            printf("**ERROR: unable to open output file.\n");
-            return -1;
-        }
-
-        
-        long writeSize = fwrite(buff, sizeof(char), fileSize, outFile);
-        if (writeSize != fileSize){
-            printf("**ERROR WRITING TO FILE: expected to write %ld bytes, but only wrote %ld\n", fileSize, writeSize);
-            return -1;
-        }
-
-        fclose(outFile);
-        free(outFileName);
     }
+
+    //iterate!
+    swap_hexes(buff, fileSize, fromColor, toColor);
+
+
+    //make a string holding the output file name
+    char* outFileName = (char*)malloc(strlen(inFileName)+strlen(argValues[argCount-1])+1+4+1); // sizeof("inFile-tocolor.svg\0")
+    //if we have a file extention, set the last '.' to a null string terminator.
+    if (curr != -1){
+        inFileName[curr] = '\0';
+    }
+    //repeatedly append pieces of string into final output name
+    strcpy(outFileName, inFileName);
+    strcat(outFileName, "-");
+    strcat(outFileName, toColor);
+    strcat(outFileName, ".svg");
+    
+    
+    FILE* outFile = fopen(outFileName, "w");
+    if (outFile == NULL) {
+        printf("**ERROR: unable to open input file.\n");
+        return -1;
+    }
+    
+    long writeSize = fwrite(buff, sizeof(char), fileSize, outFile);
+    if (writeSize != fileSize){
+        printf("**ERROR WRITING TO FILE: expected to write %ld bytes, but only wrote %ld\n", fileSize, writeSize);
+        return -1;
+    }
+    
+    fclose(inFile);
+    fclose(outFile);
+    free(outFileName);
+        
     free(buff);
     return 0;
 }
@@ -190,6 +151,8 @@ int process_svg_file(int argCount, char* argValues[], char* inFileName, int curr
   * Helper function checks if a given string is a hex code in the form 'FFFFFF'
   *
   * @param hex string to check
+  *
+  * @return true if hex, false if not 
   */
 bool isxcode(char* hex){
     if (strlen(hex) != 6){
@@ -203,25 +166,34 @@ bool isxcode(char* hex){
     return true;
 }
 
-/*
-* ./a.out filename (fromcolor) tocolor
-* fromcolor/X, X to go to first hex code
-*
-* returns 0 on success and -1 on failure
-*/
+/**
+  * @brief main()
+  *
+  * usage: program.exe folderName/fileName.svg [fromColor] toColor 
+  *
+  * - If no "fromColor" is given, instead replaces all instances
+  *   of the first hex code in the .svg
+  * - "fileName" must include .svg at the end, or else will be read like a folder
+  * - "fromColor" and toColor must be hex in the form 'FFFFFF'
+  *
+  * @return 0 if successful, -1 if not.
+  */
 int main(int argc, char* argv[]){
     
-    if (argc != 3 && argc != 4){  //check for valid arg count
+    //Check for valid arg count
+    if (argc != 3 && argc != 4){  
         printf("**USAGE: fileName.svg (fromColor) toColor\n");
         return -1;
     }
     
+    //Check for valid toColor hex
     argv[2][6] = '\0'; //ignore anything after the first 6 chars, FFFFFF
     if (!isxcode(argv[2])){
         printf("**ERROR: '%s' is not a hex code in the form 'FFFFFF'\n", argv[2]);
         return -1;
     }
 
+    //Check for valid fromColor hex, if present
     if (argc == 4){
         argv[3][6] = '\0'; //ignore anything after the first 6 chars, FFFFFF
         if (!isxcode(argv[3])){
@@ -230,9 +202,9 @@ int main(int argc, char* argv[]){
         }
     }
 
-
     char* inFileName = argv[1];
 
+    //store in curr the index of the last '.' in inputted file name, or -1 if none (folder name)
     int curr = -1;
     for (int i = 0; i < strlen(inFileName); i++){
         if(inFileName[i] == '.'){
@@ -246,10 +218,11 @@ int main(int argc, char* argv[]){
         i dont got that in me lowkey
         */
 
-
-    } else{ //single file case
-
-        process_svg_file(argc, argv, inFileName, curr);
     }
-    return 1;
+    else { //single file case
+        return process_svg_file(argc, argv, inFileName, curr);
+    }
+
+    printf("**ERROR: Should not be able to get here (process_svg_file was not called)\n");
+    return -1;
 }
